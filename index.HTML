@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Plots Dashboard</title>
+<style>
+  /* ========= THEME ========= */
+  :root{
+    /* Base (light) */
+    --bg: #ffffff;
+    --card: #ffffff;
+    --text: #0f172a;          /* slate-900 */
+    --muted: #475569;         /* slate-600 */
+    --ring: #e2e8f0;          /* slate-200 */
+    --soft: #f1f5f9;          /* slate-100 */
+
+    /* Primary blues */
+    --accent: #2563eb;        /* blue-600 */
+    --accent-700: #1d4ed8;    /* blue-700 */
+    --accent-50: #eff6ff;     /* blue-50 */
+
+    /* State */
+    --positive:#16a34a;       /* green-600 */
+    --warning:#b45309;        /* amber-700 */
+    --danger:#dc2626;         /* red-600 */
+
+    /* Effects */
+    --shadow-sm: 0 1px 2px rgba(2,6,23,.06), 0 1px 1px rgba(2,6,23,.04);
+    --shadow-md: 0 10px 15px rgba(2,6,23,.06), 0 4px 6px rgba(2,6,23,.05);
+    --radius: 14px;
+  }
+  html,body{height:100%}
+  body{
+    margin:0;
+    font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;
+    background: var(--bg);
+    color: var(--text);
+  }
+  .shell{max-width:1200px; margin:0 auto; padding:28px}
+
+  /* ========= TOPBAR ========= */
+  .topbar{
+    display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:18px
+  }
+  .title{
+    font-size:22px; font-weight:800; letter-spacing:.2px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .title-badge{
+    background:var(--accent-50); color:var(--accent);
+    border:1px solid var(--ring);
+    padding:4px 8px; border-radius:999px; font-size:12px; font-weight:700;
+  }
+
+  .controls{display:flex; gap:10px; flex-wrap:wrap}
+  .control{
+    background:var(--card);
+    border:1px solid var(--ring);
+    color:var(--text);
+    padding:8px 10px;
+    border-radius: var(--radius);
+    display:flex; gap:8px; align-items:center;
+    box-shadow: var(--shadow-sm);
+  }
+  .control input, .control select{
+    background:transparent; border:none; color:inherit; outline:none;
+  }
+  .control input::placeholder{color:#94a3b8}
+  .pill{
+    padding:8px 12px; border-radius:999px;
+    border:1px solid var(--accent);
+    background: var(--accent);
+    color: #fff; cursor:pointer; font-weight:600;
+    box-shadow: var(--shadow-sm);
+    transition: transform .05s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .pill:hover{ background: var(--accent-700); box-shadow: var(--shadow-md); }
+  .pill:active{ transform: translateY(1px); }
+  .pill[aria-pressed="true"]{ outline:2px solid var(--accent-50); }
+
+  /* ========= GRID / CARDS ========= */
+  .grid{
+    display:grid; grid-template-columns:repeat(12,1fr); gap:16px;
+    transition: .2s grid-template-columns ease
+  }
+  .grid[data-mode="list"]{grid-template-columns:repeat(1,1fr)}
+  .card{
+    grid-column: span 4;
+    background:var(--card);
+    border:1px solid var(--ring);
+    border-radius: var(--radius);
+    overflow:hidden; position:relative;
+    box-shadow: var(--shadow-sm);
+    transition: transform .06s ease, box-shadow .15s ease;
+  }
+  .card:hover{ box-shadow: var(--shadow-md); transform: translateY(-1px);}
+  .grid[data-mode="list"] .card{grid-column:1/-1; display:flex; gap:16px; align-items:center}
+  .thumb-wrap{position:relative; aspect-ratio:16/10; background:var(--soft); overflow:hidden}
+  .grid[data-mode="list"] .thumb-wrap{width:380px; flex:0 0 380px}
+  .thumb{width:100%; height:100%; object-fit:cover; transform:scale(1.001); transition:transform .25s ease}
+  .card:hover .thumb{transform:scale(1.02)}
+
+  .chip-tray{
+    position:absolute; top:10px; left:10px; display:flex; gap:6px; z-index:2; pointer-events:none
+  }
+  .chip{
+    pointer-events:auto;
+    font-size:12px; color: var(--accent);
+    background:#ffffffd6; padding:4px 10px; border-radius:999px; border:1px solid var(--ring);
+    box-shadow: var(--shadow-sm);
+  }
+  .meta{
+    padding:12px 14px; display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between
+  }
+  .name{font-weight:700}
+  .muted{color:var(--muted)}
+  .btns{display:flex; gap:8px}
+  .btn{
+    background:#ffffff; border:1px solid var(--accent); color:var(--accent);
+    border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:700;
+    box-shadow: var(--shadow-sm);
+    transition: transform .05s ease, background .15s ease, color .15s ease;
+  }
+  .btn:hover{ background:var(--accent); color:#fff; }
+  .btn:active{ transform: translateY(1px); }
+
+  .tagbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+  .tag{font-size:12px; color:#1e293b; background:var(--accent-50); border:1px solid var(--ring); padding:6px 10px; border-radius:999px; font-weight:700}
+
+  /* ========= LIGHTBOX ========= */
+  .lightbox{
+    position:fixed; inset:0; background:rgba(15,23,42,.55);
+    display:none; align-items:center; justify-content:center; z-index:50; backdrop-filter: blur(2px);
+  }
+  .lightbox[aria-hidden="false"]{display:flex}
+  .panel{
+    background:var(--card); border:1px solid var(--ring); border-radius:16px;
+    max-width:min(92vw, 1200px); max-height:min(90vh, 1000px);
+    width:clamp(300px, 80vw, 1100px); display:flex; flex-direction:column; overflow:hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-bottom:1px solid var(--ring);
+    background: linear-gradient(0deg, #fff, #fff), var(--accent-50);
+  }
+  .panel-title{font-weight:800}
+  .panel-body{position:relative; display:flex; align-items:center; justify-content:center; background:var(--soft)}
+  .panel-body img{max-width:100%; max-height:70vh; object-fit:contain}
+  .panel-foot{
+    display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; border-top:1px solid var(--ring);
+    background:#fff;
+  }
+  .kbd{
+    font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    background:var(--soft); padding:2px 6px; border-radius:6px; border:1px solid var(--ring); font-size:12px
+  }
+  .ghost{opacity:.65}
+  .hidden{display:none}
+
+  /* Hover preview */
+  .hover-preview{
+    position:absolute; inset:auto 10px 10px auto; background:#0f172acc; color:#fff;
+    padding:6px 8px; border-radius:8px; font-size:12px; box-shadow: var(--shadow-sm);
+  }
+
+  /* ========= RESPONSIVE ========= */
+  @media (max-width: 1024px){ .card{grid-column: span 6} }
+  @media (max-width: 640px){ .card{grid-column: span 12} .grid[data-mode="list"] .thumb-wrap{width:auto; flex:1 1 auto} }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div class="topbar">
+      <div class="title">📊 Standard scRNAseq Analysis <span class="title-badge"></span></div>
+      <div class="controls">
+        <label class="control" title="Search by title or tag">🔎
+          <input id="search" type="search" placeholder="Search plots…">
+        </label>
+        <label class="control" title="Sort">⇅
+          <select id="sort">
+            <option value="title-asc">Title A→Z</option>
+            <option value="title-desc">Title Z→A</option>
+            <option value="recent">Recently Added</option>
+          </select>
+        </label>
+        <button id="gridToggle" class="pill" aria-pressed="false" title="Toggle list/grid">🗂️ View</button>
+
+        <!-- Dummy controls (fun but non-functional) -->
+        <button class="pill" title="(Dummy) Pin your favorites">📌 Pin</button>
+        <button class="pill" title="(Dummy) Start slideshow">▶️ Slideshow</button>
+      </div>
+    </div>
+
+    <div class="tagbar" id="tagbar">
+      <!-- tags get populated dynamically -->
+    </div>
+
+    <div class="grid" id="grid" data-mode="grid">
+      <!-- cards injected here -->
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <div class="panel" role="dialog" aria-modal="true">
+      <div class="panel-head">
+        <div class="panel-title" id="lbTitle">Title</div>
+        <div class="btns">
+          <button id="zoomIn" class="btn" title="Zoom In">＋</button>
+          <button id="zoomOut" class="btn" title="Zoom Out">－</button>
+          <a id="downloadLink" class="btn" download title="Download PNG">⬇️ Download</a>
+          <button id="close" class="btn" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <img id="lbImg" alt="">
+        <div class="hover-preview hidden" id="lbMeta">Loading…</div>
+        <button id="prev" class="btn" style="position:absolute; left:10px" title="Previous (←)">⟵</button>
+        <button id="next" class="btn" style="position:absolute; right:10px" title="Next (→)">⟶</button>
+      </div>
+      <div class="panel-foot">
+        <div class="muted">Tip: Use <span class="kbd">←</span>/<span class="kbd">→</span>, <span class="kbd">Esc</span></div>
+        <div class="btns">
+          <!-- more dummies -->
+          <button class="btn ghost" title="(Dummy) ⭐ rate">⭐ Rate</button>
+          <button class="btn ghost" title="(Dummy) Share">🔗 Share</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/** ===========================
+ *  👇 EDIT THIS LIST ONLY 👇
+ *  Use your real files under plots/.
+ * ============================*/
+const IMAGES = [
+  {file:"plots/elbow_plot-1.png",          title:"Elbow Plot",            tags:["pca","elbow"]},
+  {file:"plots/multi-heatmap-1.png",       title:"Correlation Heatmap",   tags:["heatmap","corr"]},
+  {file:"plots/pca_viz-1.png",             title:"PCA Visualization 1",   tags:["pca"]},
+  {file:"plots/pca_viz-2.png",             title:"PCA Visualization 2",   tags:["pca"]},
+  {file:"plots/qc2-1.png",                 title:"Quality Control 1",     tags:["qc"]},
+  {file:"plots/qc2-2.png",                 title:"Quality Control 2",     tags:["qc"]},
+  {file:"plots/umapplot-1.png",            title:"UMAP",                  tags:["umap","embedding"]},
+  {file:"plots/var_features-1.png",        title:"Varying Features",      tags:["features"]},
+  {file:"plots/markerplots-1.png",         title:"Marker Plot 1",         tags:["markers"]},
+  {file:"plots/markerplots-2.png",         title:"Marker Plot 2",         tags:["markers"]},
+  {file:"plots/labelplot-1.png",           title:"t-SNE Visualization",   tags:["tsne","embedding"]},
+  {file:"plots/clusterHeatmap-1.png",      title:"Clustering Heatmap",    tags:["heatmap","clusters"]},
+];
+
+/** State */
+const state = {
+  mode: "grid",
+  zoom: 1,
+  idx: 0,
+  filterText: "",
+  filterTag: null,
+  sort: "title-asc"
+};
+
+/* Elements */
+const grid = document.getElementById("grid");
+const search = document.getElementById("search");
+const sortSel = document.getElementById("sort");
+const gridToggle = document.getElementById("gridToggle");
+const tagbar = document.getElementById("tagbar");
+
+const lightbox = document.getElementById("lightbox");
+const lbTitle = document.getElementById("lbTitle");
+const lbImg = document.getElementById("lbImg");
+const lbMeta = document.getElementById("lbMeta");
+const downloadLink = document.getElementById("downloadLink");
+const btnPrev = document.getElementById("prev");
+const btnNext = document.getElementById("next");
+const btnClose = document.getElementById("close");
+const btnZoomIn = document.getElementById("zoomIn");
+const btnZoomOut = document.getElementById("zoomOut");
+
+/* Build tag buttons */
+const allTags = Array.from(new Set(IMAGES.flatMap(p => p.tags || []))).sort();
+function renderTags(){
+  tagbar.innerHTML = "";
+  if (!allTags.length) return;
+  const allBtn = document.createElement("button");
+  allBtn.className = "btn";
+  allBtn.textContent = "All";
+  allBtn.setAttribute("aria-pressed", state.filterTag ? "false":"true");
+  allBtn.onclick = () => { state.filterTag = null; renderTags(); renderGrid(); };
+  tagbar.appendChild(allBtn);
+
+  allTags.forEach(t=>{
+    const b = document.createElement("span");
+    b.className = "tag";
+    b.textContent = "#" + t;
+    b.style.cursor = "pointer";
+    b.onclick = () => { state.filterTag = (state.filterTag===t? null : t); renderGrid(); };
+    tagbar.appendChild(b);
+  });
+}
+
+/* Filtering & sorting */
+function filtered(){
+  let rows = IMAGES.map((r,i)=>({...r, _i:i, addedAt:i}));
+  const q = state.filterText.trim().toLowerCase();
+  if (q){
+    rows = rows.filter(r =>
+      (r.title||"").toLowerCase().includes(q) ||
+      (r.tags||[]).join(" ").toLowerCase().includes(q) ||
+      (r.file||"").toLowerCase().includes(q)
+    );
+  }
+  if (state.filterTag){
+    rows = rows.filter(r => (r.tags||[]).includes(state.filterTag));
+  }
+  switch(state.sort){
+    case "title-desc": rows.sort((a,b)=> (b.title||"").localeCompare(a.title||"")); break;
+    case "recent": rows.sort((a,b)=> b.addedAt - a.addedAt); break;
+    default: rows.sort((a,b)=> (a.title||"").localeCompare(b.title||""));
+  }
+  return rows;
+}
+
+/* Grid rendering */
+function renderGrid(){
+  const rows = filtered();
+  grid.setAttribute("data-mode", state.mode);
+  grid.innerHTML = rows.map((r)=>cardHTML(r)).join("");
+  rows.forEach((r,idx)=>{
+    const el = document.querySelector(`[data-key="${r._i}"]`);
+    el.querySelector(".open").addEventListener("click", ()=> openLightbox(rows, idx));
+    el.querySelector(".download").addEventListener("click", (e)=>{
+      e.stopPropagation();
+      const a = document.createElement("a");
+      a.href = r.file; a.download = (r.title||`plot-${idx}`).replace(/\s+/g,"_") + extOf(r.file);
+      document.body.appendChild(a); a.click(); a.remove();
+    });
+    el.querySelectorAll(".dummy").forEach(b=> b.addEventListener("click", (e)=>{
+      e.stopPropagation();
+      b.classList.toggle("ghost");
+      alert("This is a dummy control ✨");
+    }));
+  });
+}
+function cardHTML(r){
+  const chips = (r.tags||[]).map(t=>`<span class="chip">#${t}</span>`).join("");
+  return `
+  <article class="card" data-key="${r._i}">
+    <div class="thumb-wrap open" title="Click to view">
+      <div class="chip-tray">${chips}</div>
+      <img class="thumb" src="${r.file}" alt="${escapeHtml(r.title||'Plot')}">
+      <div class="hover-preview">Click to open</div>
+    </div>
+    <div class="meta">
+      <div>
+        <div class="name">${escapeHtml(r.title||'Untitled Plot')}</div>
+        <div class="muted">${escapeHtml(shortPath(r.file))}</div>
+      </div>
+      <div class="btns">
+        <button class="btn open">View</button>
+        <button class="btn download" title="Download">⬇️</button>
+        <button class="btn dummy" title="(Dummy) Pin">📌</button>
+      </div>
+    </div>
+  </article>`;
+}
+
+/* Lightbox */
+let currentList = [];
+function openLightbox(list, idx){
+  currentList = list;
+  state.idx = idx;
+  state.zoom = 1;
+  lbImg.style.transform = `scale(1)`;
+  updateLightbox();
+  lightbox.setAttribute("aria-hidden", "false");
+}
+function updateLightbox(){
+  const row = currentList[state.idx];
+  if (!row) return;
+  lbTitle.textContent = row.title || "Plot";
+  lbImg.src = row.file;
+  lbImg.alt = row.title || "Plot";
+  downloadLink.href = row.file;
+  const base = (row.title||`plot-${state.idx}`).replace(/\s+/g,"_");
+  downloadLink.download = base + extOf(row.file);
+  lbMeta.classList.add("hidden");
+  lbImg.onload = () => {
+    lbMeta.textContent = `${lbImg.naturalWidth}×${lbImg.naturalHeight}px — zoom ${Math.round(state.zoom*100)}%`;
+    lbMeta.classList.remove("hidden");
+  }
+}
+function closeLightbox(){ lightbox.setAttribute("aria-hidden","true"); }
+btnClose.addEventListener("click", closeLightbox);
+btnPrev.addEventListener("click", ()=> { state.idx = (state.idx-1+currentList.length)%currentList.length; updateLightbox(); });
+btnNext.addEventListener("click", ()=> { state.idx = (state.idx+1)%currentList.length; updateLightbox(); });
+btnZoomIn.addEventListener("click", ()=> { state.zoom = Math.min(4, state.zoom+0.1); lbImg.style.transform = `scale(${state.zoom})`; updateLightbox(); });
+btnZoomOut.addEventListener("click", ()=> { state.zoom = Math.max(0.25, state.zoom-0.1); lbImg.style.transform = `scale(${state.zoom})`; updateLightbox(); });
+lightbox.addEventListener("click", (e)=> { if (e.target === lightbox) closeLightbox(); });
+
+/* Global controls */
+search.addEventListener("input", ()=> { state.filterText = search.value; renderGrid(); });
+sortSel.addEventListener("change", ()=> { state.sort = sortSel.value; renderGrid(); });
+gridToggle.addEventListener("click", ()=>{
+  state.mode = (state.mode === "grid" ? "list" : "grid");
+  gridToggle.setAttribute("aria-pressed", state.mode === "list" ? "true":"false");
+  renderGrid();
+});
+
+/* Keyboard shortcuts */
+window.addEventListener("keydown", (e)=>{
+  if (lightbox.getAttribute("aria-hidden")==="false"){
+    if (e.key === "Escape") closeLightbox();
+    if (e.key === "ArrowLeft") btnPrev.click();
+    if (e.key === "ArrowRight") btnNext.click();
+    if (e.key === "+") btnZoomIn.click();
+    if (e.key === "-") btnZoomOut.click();
+  }
+});
+
+/* Helpers */
+function extOf(path){ const m = path.match(/\.[a-z0-9]+$/i); return m ? m[0] : ".png"; }
+function shortPath(p){ return p.replace(/^.*?plots\//,"plots/"); }
+function escapeHtml(s){ return (s||"").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])); }
+
+/* Boot */
+renderTags();
+renderGrid();
+</script>
+</body>
+</html>
